@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft Bot Status</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    #status {
+      font-size: 2em;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+    #messages, #shardsMessages {
+      max-height: 400px;
+      overflow-y: scroll;
+      margin: 20px auto;
+      padding: 10px;
+      border: 1px solid #ccc;
+      width: 80%;
+      text-align: left;
+    }
+    .message {
+      margin-bottom: 10px;
+    }
+    .username {
+      font-weight: bold;
+      color: blue;
+    }
+    .time {
+      color: gray;
+      font-size: 0.9em;
+    }
+    .shardsMessage {
+      font-weight: bold;
+      font-style: italic;
+      color: limegreen;
+    }
+    #shardsMessages .message {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: darkorange;
+    }
+    #inputContainer {
+      margin-top: 20px;
+    }
+    #inputContainer input {
+      width: 300px;
+      padding: 10px;
+    }
+    #inputContainer button {
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Shards Update:</h2>
+  <div id="shardsMessages"></div>
+  <h2>Server Chat:</h2>
+  <div id="messages"></div>
+  <div id="inputContainer">
+    <input type="text" id="chatInput" placeholder="Type your message...">
+    <button onclick="sendMessage()">Send</button>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io()
+    const shardsMessages = []
+
+    socket.on('init', (msgs) => {
+      const messagesDiv = document.getElementById('messages')
+      messagesDiv.innerHTML = ''
+      msgs.forEach(msg => addMessage(msg))
+    })
+
+    socket.on('message', (msg) => {
+      addMessage(msg)
+    })
+
+    function addMessage(msg) {
+      const messagesDiv = document.getElementById('messages')
+      const isScrolledToBottom = messagesDiv.scrollHeight - messagesDiv.clientHeight <= messagesDiv.scrollTop + 1
+
+      const messageDiv = document.createElement('div')
+      messageDiv.className = 'message'
+      if (msg.username === 'shards') {
+        messageDiv.classList.add('shardsMessage')
+        addShardsMessage(msg)
+      }
+
+      messageDiv.innerHTML = `<span class="username">${msg.username}</span>: ${msg.text} <span class="time">(${msg.time})</span>`
+      messagesDiv.appendChild(messageDiv)
+
+      // Scroll to the bottom if the user is at the bottom
+      if (isScrolledToBottom) {
+        messagesDiv.scrollTop = messagesDiv.scrollHeight
+      }
+    }
+
+    function addShardsMessage(msg) {
+      const shardsMessagesDiv = document.getElementById('shardsMessages')
+      const shardsMessageDiv = document.createElement('div')
+      shardsMessageDiv.className = 'message'
+      shardsMessageDiv.innerHTML = `<span class="username">${msg.username}</span>: ${msg.text} <span class="time">(${msg.time})</span>`
+
+      shardsMessages.push(shardsMessageDiv)
+      if (shardsMessages.length > 3) {
+        shardsMessages.shift()
+      }
+
+      shardsMessagesDiv.innerHTML = ''
+      shardsMessages.forEach(m => shardsMessagesDiv.appendChild(m))
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('chatInput')
+      const message = input.value
+      if (message.trim() !== '') {
+        socket.emit('sendMessage', message)
+        input.value = ''
+      }
+    }
+  </script>
+</body>
+</html>
